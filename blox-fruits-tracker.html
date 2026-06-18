@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Blox Fruits Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+:root {
+  --bg:#0A0E1A; --surface:#0F1629; --card:#141B35; --border:#1E2D50;
+  --accent:#00D4FF; --gold:#FFD700; --text:#E8F4FF; --muted:#7B9EC0;
+  --danger:#FF3B5C; --success:#00E5A0; --purple:#8B5CF6;
+  --glow:0 0 20px rgba(0,212,255,0.35); --gold-glow:0 0 20px rgba(255,215,0,0.35);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden;}
+#app{display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+#sidebar{width:210px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width .3s ease;flex-shrink:0;overflow:hidden;}
+#sidebar.collapsed{width:60px;}
+.logo{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.logo-icon{font-size:22px;filter:drop-shadow(var(--glow));flex-shrink:0;}
+.logo-text{font-size:13px;font-weight:900;color:var(--gold);text-shadow:var(--gold-glow);white-space:nowrap;}
+#sidebar.collapsed .logo-text,#sidebar.collapsed .nav-label,#sidebar.collapsed .day-badge,#sidebar.collapsed .collapse-label{display:none;}
+#sidebar.collapsed .logo{justify-content:center;padding:16px 0;}
+#sidebar.collapsed .nav-item{justify-content:center;padding:13px 0;}
+.day-badge{margin:8px 12px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:8px;text-align:center;}
+.day-badge .bl{font-size:9px;color:var(--muted);letter-spacing:3px;font-weight:700;}
+.day-badge .bn{font-size:26px;font-weight:900;color:var(--accent);line-height:1.1;}
+nav{flex:1;padding-top:4px;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--muted);font-weight:600;font-size:13px;transition:all .2s;white-space:nowrap;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{background:rgba(0,212,255,.08);border-left-color:var(--accent);color:var(--accent);}
+.nav-icon{font-size:16px;flex-shrink:0;}
+#collapse-btn{margin:8px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:6px 10px;font-size:12px;font-family:inherit;transition:all .2s;text-align:center;}
+#collapse-btn:hover{color:var(--text);border-color:var(--accent);}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;padding:22px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+#main::-webkit-scrollbar{width:5px;}
+#main::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.page{display:none;animation:fadeIn .2s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;}
+.page-title{font-size:21px;font-weight:900;}
+.flex-col{display:flex;flex-direction:column;gap:14px;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;}
+.day-header-badge{background:rgba(255,215,0,.15);color:var(--gold);border:1px solid rgba(255,215,0,.3);font-size:12px;padding:5px 13px;display:none;}
+
+/* DAY COUNTER */
+#day-counter-card{background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;box-shadow:var(--glow);position:relative;overflow:hidden;}
+#day-counter-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,212,255,.06) 0%,transparent 70%);pointer-events:none;}
+.day-sub{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:3px;margin-bottom:6px;}
+#day-number{font-size:76px;font-weight:900;line-height:1;color:var(--accent);text-shadow:var(--glow);transition:transform .15s;}
+#day-number.pulse{transform:scale(1.07);}
+
+/* PROGRESS */
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:6px 0;}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .4s ease;}
+
+/* TASK */
+.task-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);cursor:pointer;transition:all .2s;margin-bottom:4px;}
+.task-item:hover{background:rgba(0,212,255,.05);}
+.task-item.done{background:rgba(0,229,160,.08);}
+.task-item.done .task-label{text-decoration:line-through;color:var(--success);}
+.task-label{flex:1;font-size:13px;}
+
+/* QUICK STAT */
+.quick-stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+.qs-icon{font-size:20px;margin-bottom:5px;}
+.qs-value{font-size:26px;font-weight:900;line-height:1;}
+.qs-label{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600;}
+
+/* STREAK */
+#streak-card{background:linear-gradient(135deg,var(--card),var(--surface));border:1px solid rgba(255,215,0,.22);border-radius:12px;padding:16px 18px;display:none;align-items:center;gap:12px;}
+
+/* BUTTONS */
+.btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;border:1px solid;}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#000;}
+.btn-accent:hover{opacity:.85;}
+.btn-ghost-accent{background:transparent;border-color:var(--accent);color:var(--accent);}
+.btn-ghost-accent:hover{background:rgba(0,212,255,.1);}
+.btn-success{background:var(--success);border-color:var(--success);color:#000;}
+.btn-ghost-success{background:transparent;border-color:var(--success);color:var(--success);}
+.btn-ghost-success:hover{background:rgba(0,229,160,.1);}
+.btn-purple{background:var(--purple);border-color:var(--purple);color:#fff;}
+.btn-ghost-purple{background:transparent;border-color:var(--purple);color:var(--purple);}
+.btn-ghost-purple:hover{background:rgba(139,92,246,.1);}
+.btn-danger{background:transparent;border-color:var(--danger);color:var(--danger);}
+.btn-danger:hover{background:rgba(255,59,92,.1);}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#000;}
+.btn-ghost-gold{background:transparent;border-color:var(--gold);color:var(--gold);}
+.btn-ghost-gold:hover{background:rgba(255,215,0,.1);}
+.btn-sm{padding:6px 13px;font-size:12px;}
+.btn-xs{padding:4px 10px;font-size:11px;}
+.btn-icon{padding:5px 9px;font-size:13px;line-height:1;}
+
+/* FRUITS */
+#fruit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:9px;}
+.fruit-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 8px;cursor:pointer;transition:all .2s;text-align:center;}
+.fruit-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+.fruit-card.owned{background:rgba(0,229,160,.1);border-color:var(--success);}
+.fruit-card.used{background:rgba(139,92,246,.1);border-color:var(--purple);}
+.fruit-card.selected{outline:2px solid var(--gold);}
+.fruit-name{font-size:11px;font-weight:700;margin-bottom:4px;}
+.fruit-type{font-size:10px;color:var(--muted);margin-top:3px;}
+#fruit-detail{background:var(--card);border-radius:12px;padding:18px;display:none;position:relative;}
+#fruit-detail.visible{display:block;}
+#fruit-detail-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+#fruit-filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
+.filter-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--muted);background:transparent;color:var(--muted);transition:all .2s;}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08);}
+
+/* TIER */
+.tier-C{background:rgba(139,195,74,.15);color:#8BC34A;border-color:rgba(139,195,74,.3);}
+.tier-B{background:rgba(33,150,243,.15);color:#2196F3;border-color:rgba(33,150,243,.3);}
+.tier-A{background:rgba(255,152,0,.15);color:#FF9800;border-color:rgba(255,152,0,.3);}
+.tier-S{background:rgba(255,59,92,.15);color:#FF3B5C;border-color:rgba(255,59,92,.3);}
+.tier-Sp{background:rgba(255,215,0,.15);color:#FFD700;border-color:rgba(255,215,0,.3);}
+
+/* STAT FIELDS */
+.stat-field{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;}
+.stat-field label{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.stat-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 11px;font-size:19px;font-weight:900;text-align:right;font-family:inherit;outline:none;transition:border .2s;}
+.stat-input:focus{border-color:var(--accent);}
+
+/* FORM */
+.form-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 13px;font-size:14px;font-family:inherit;outline:none;transition:border .2s;}
+.form-input:focus{border-color:var(--accent);}
+.form-label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px;}
+.notes-area{width:100%;min-height:90px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:11px;font-family:inherit;font-size:13px;outline:none;resize:vertical;transition:border .2s;}
+.notes-area:focus{border-color:var(--accent);}
+
+/* QUEST */
+.quest-item{display:flex;align-items:center;gap:13px;padding:13px 15px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;margin-bottom:7px;}
+.quest-item:hover{border-color:var(--accent);}
+.quest-item.done{border-color:rgba(0,229,160,.3);opacity:.75;}
+.quest-item.done .quest-name{text-decoration:line-through;color:var(--success);}
+.quest-name{font-weight:700;font-size:14px;margin-bottom:2px;}
+.quest-desc{font-size:12px;color:var(--muted);margin-bottom:5px;}
+.quest-badges{display:flex;gap:7px;flex-wrap:wrap;}
+
+/* CUSTOM QUEST BUILDER */
+.custom-quest-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:5px;}
+.custom-quest-row .cq-icon{font-size:18px;cursor:pointer;}
+.custom-quest-row .cq-name{flex:1;font-size:13px;font-weight:600;}
+.custom-quest-row .cq-check{font-size:18px;cursor:pointer;}
+.custom-quest-row.done .cq-name{text-decoration:line-through;color:var(--success);}
+.add-quest-row{display:flex;gap:8px;margin-top:8px;}
+.emoji-pick{font-size:20px;cursor:pointer;padding:4px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:14px;}
+.tab-btn{flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.tab-btn.active{background:var(--card);color:var(--accent);box-shadow:0 0 0 1px var(--border);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* MONTHLY QUEST */
+.month-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.month-label{font-weight:900;font-size:15px;color:var(--gold);}
+.month-prog{font-size:12px;color:var(--muted);}
+.mq-item{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;background:var(--card);border:1px solid var(--border);border-radius:11px;margin-bottom:7px;cursor:pointer;transition:all .2s;}
+.mq-item:hover{border-color:var(--purple);}
+.mq-item.done{border-color:rgba(0,229,160,.3);opacity:.7;}
+.mq-item.done .mq-name{text-decoration:line-through;color:var(--success);}
+.mq-icon{font-size:22px;}
+.mq-body{flex:1;}
+.mq-name{font-weight:700;font-size:13px;margin-bottom:2px;}
+.mq-desc{font-size:11px;color:var(--muted);}
+.mq-check{font-size:18px;}
+
+/* TRADING */
+.trade-search-bar{display:flex;gap:9px;margin-bottom:12px;align-items:center;}
+.trade-search-bar input{flex:1;}
+.trade-sort-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.sort-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;}
+.sort-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.08);}
+.trade-table{width:100%;border-collapse:collapse;}
+.trade-table th{text-align:left;padding:8px 12px;font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1.5px;border-bottom:1px solid var(--border);}
+.trade-table td{padding:9px 12px;font-size:13px;border-bottom:1px solid rgba(30,45,80,.6);}
+.trade-table tr:hover td{background:rgba(0,212,255,.04);}
+.trade-table tr:last-child td{border-bottom:none;}
+.val-high{color:var(--gold);font-weight:800;}
+.val-mid{color:var(--accent);font-weight:700;}
+.val-low{color:var(--muted);font-weight:600;}
+.demand-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+.trade-tip{font-size:11px;color:var(--muted);padding:10px 12px;background:var(--surface);border-radius:8px;margin-top:10px;}
+
+/* SETTINGS */
+#settings-layout{display:flex;gap:16px;}
+#settings-nav{width:145px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;}
+.settings-nav-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;border-left:3px solid transparent;transition:all .2s;}
+.settings-nav-item.active{background:rgba(0,212,255,.08);border-left-color:var(--accent);color:var(--accent);}
+.settings-panel{display:none;}
+.settings-panel.active{display:block;}
+
+/* THEME */
+#theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.theme-card{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:15px;cursor:pointer;transition:all .2s;text-align:center;}
+.theme-card.active{border-color:var(--accent);}
+.theme-dots{display:flex;justify-content:center;gap:6px;margin-bottom:7px;}
+.theme-dot{width:17px;height:17px;border-radius:50%;}
+.perf-stat{text-align:center;}
+.perf-value{font-size:26px;font-weight:900;}
+.perf-label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* EMOJI MODAL */
+#emoji-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000;}
+#emoji-modal.open{display:flex;}
+#emoji-picker{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:320px;width:90%;}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px;max-height:200px;overflow-y:auto;}
+.emoji-btn{font-size:20px;padding:6px;border:none;background:transparent;cursor:pointer;border-radius:6px;transition:background .15s;}
+.emoji-btn:hover{background:var(--surface);}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="logo">
+    <span class="logo-icon">🍇</span>
+    <span class="logo-text">BLOX TRACKER</span>
+  </div>
+  <div class="day-badge" id="sb-badge">
+    <div class="bl">DAY</div>
+    <div class="bn" id="sb-day">?</div>
+  </div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></div>
+    <div class="nav-item" data-page="fruits"><span class="nav-icon">🍇</span><span class="nav-label">Fruits</span></div>
+    <div class="nav-item" data-page="trading"><span class="nav-icon">💱</span><span class="nav-label">Trading</span></div>
+    <div class="nav-item" data-page="quests"><span class="nav-icon">📋</span><span class="nav-label">Quests</span></div>
+    <div class="nav-item" data-page="stats"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></div>
+    <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></div>
+    <div class="nav-item" data-page="ui"><span class="nav-icon">🎨</span><span class="nav-label">UI Changer</span></div>
+  </nav>
+  <button id="collapse-btn"><span class="collapse-label">← Hide</span><span class="collapse-icon">◀</span></button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div class="page-title" id="dash-title">Welcome back, Pirate 🏴‍☠️</div>
+    <span class="badge day-header-badge" id="dash-hbadge">🔥 Day 1</span>
+  </div>
+  <div class="flex-col">
+    <div class="grid-2">
+      <div id="day-counter-card">
+        <div class="day-sub">TODAY — DAY</div>
+        <div id="day-number">?</div>
+        <div id="day-no-date" style="margin-top:10px;">
+          <div style="color:var(--muted);font-size:13px;margin-bottom:10px;">No start date set</div>
+          <button class="btn btn-accent" onclick="setStartToday()">Start Today</button>
+        </div>
+        <div id="day-has-date" style="display:none;margin-top:8px;">
+          <div style="color:var(--muted);font-size:13px;">Tomorrow → <span style="color:var(--gold);font-weight:800;" id="day-tmrw">Day 2</span></div>
+          <div style="color:var(--muted);font-size:11px;margin-top:3px;" id="day-since"></div>
+          <button class="btn btn-danger btn-xs" style="margin-top:10px;" onclick="resetDays()">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-weight:800;font-size:14px;">Daily Checklist</span>
+          <span id="task-badge" class="badge" style="background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.3);">0/0</span>
+        </div>
+        <div class="progress-bar"><div id="task-prog" class="progress-fill" style="width:0%"></div></div>
+        <div id="task-list" style="margin-top:8px;"></div>
+      </div>
+    </div>
+    <div class="grid-4">
+      <div class="quick-stat"><div class="qs-icon">⚡</div><div class="qs-value" id="qs-level" style="color:var(--gold);">2500</div><div class="qs-label">Level</div></div>
+      <div class="quick-stat"><div class="qs-icon">🍇</div><div class="qs-value" id="qs-fruits" style="color:var(--accent);">0</div><div class="qs-label">Fruits Owned</div></div>
+      <div class="quick-stat"><div class="qs-icon">💀</div><div class="qs-value" id="qs-boss" style="color:var(--danger);">0</div><div class="qs-label">Boss Kills</div></div>
+      <div class="quick-stat"><div class="qs-icon">🌀</div><div class="qs-value" id="qs-raids" style="color:var(--purple);">0</div><div class="qs-label">Raids Done</div></div>
+    </div>
+    <div id="streak-card">
+      <span style="font-size:30px;">🔥</span>
+      <div><div style="font-weight:800;color:var(--gold);" id="streak-title">New Recruit</div><div style="font-size:13px;color:var(--muted);margin-top:2px;" id="streak-sub"></div></div>
+      <div style="margin-left:auto;text-align:right;"><div style="font-size:11px;color:var(--muted);">Next milestone</div><div style="font-weight:700;color:var(--gold);" id="streak-mile">Day 7</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FRUITS -->
+<div class="page" id="page-fruits">
+  <div class="page-header">
+    <div class="page-title">🍇 Devil Fruit Tracker</div>
+    <span class="badge day-header-badge" id="fruits-hbadge">🔥 Day 1</span>
+  </div>
+  <div class="flex-col">
+    <div class="grid-3">
+      <div class="quick-stat"><div class="qs-icon">✅</div><div class="qs-value" id="f-owned" style="color:var(--success);">0</div><div class="qs-label">Owned</div></div>
+      <div class="quick-stat"><div class="qs-icon">💫</div><div class="qs-value" id="f-used" style="color:var(--purple);">0</div><div class="qs-label">Used/Awakened</div></div>
+      <div class="quick-stat"><div class="qs-icon">❌</div><div class="qs-value" id="f-missing" style="color:var(--muted);">40</div><div class="qs-label">Missing</div></div>
+    </div>
+    <div id="fruit-filters"></div>
+    <div id="fruit-detail" class="card">
+      <button id="fruit-detail-close" onclick="closeFruitDetail()">×</button>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+        <div id="fd-ball" style="width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;">🍇</div>
+        <div><div id="fd-name" style="font-size:19px;font-weight:900;"></div><div id="fd-badges" style="display:flex;gap:7px;margin-top:4px;"></div></div>
+        <div style="margin-left:auto;text-align:right;" id="fd-value-block"></div>
+      </div>
+      <div style="display:flex;gap:9px;">
+        <button class="btn btn-ghost-success" style="flex:1;" id="fd-own-btn" onclick="fdToggle('owned')">Mark Owned</button>
+        <button class="btn btn-ghost-purple" style="flex:1;" id="fd-use-btn" onclick="fdToggle('used')">Mark Used</button>
+      </div>
+    </div>
+    <div id="fruit-grid"></div>
+  </div>
+</div>
+
+<!-- TRADING -->
+<div class="page" id="page-trading">
+  <div class="page-header">
+    <div class="page-title">💱 Trading Values</div>
+    <span class="badge day-header-badge" id="trading-hbadge">🔥 Day 1</span>
+  </div>
+  <div class="flex-col">
+    <div class="card" style="padding:12px 16px;background:linear-gradient(135deg,var(--card),var(--surface));border-color:rgba(255,215,0,.2);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:22px;">⚠️</span>
+        <span style="font-size:12px;color:var(--muted);">Values are community estimates and fluctuate. Use as a rough guide only. High demand = easier to trade.</span>
+      </div>
+    </div>
+    <div class="trade-search-bar">
+      <input class="form-input" id="trade-search" placeholder="🔍 Search fruit..." oninput="renderTradeTable()"/>
+      <button class="btn btn-ghost-gold btn-sm" onclick="document.getElementById('trade-search').value='';renderTradeTable();">Clear</button>
+    </div>
+    <div class="trade-sort-bar" id="trade-sort-bar"></div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="trade-table" id="trade-table">
+        <thead><tr>
+          <th>FRUIT</th><th>TIER</th><th>TYPE</th><th>VALUE (ROBUX EST.)</th><th>DEMAND</th><th>TREND</th>
+        </tr></thead>
+        <tbody id="trade-tbody"></tbody>
+      </table>
+    </div>
+    <div class="trade-tip">💡 <b>Tip:</b> S+ fruits like Dragon & Dough hold the highest value. Always check current Blox Fruits trading servers for real-time prices before trading!</div>
+  </div>
+</div>
+
+<!-- QUESTS -->
+<div class="page" id="page-quests">
+  <div class="page-header">
+    <div class="page-title">📋 Quests & Grind</div>
+    <span class="badge day-header-badge" id="quests-hbadge">🔥 Day 1</span>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchQuestTab('daily',this)">📅 Daily</button>
+    <button class="tab-btn" onclick="switchQuestTab('monthly',this)">🗓️ Monthly</button>
+    <button class="tab-btn" onclick="switchQuestTab('story',this)">📖 Story</button>
+  </div>
+
+  <!-- DAILY TAB -->
+  <div class="tab-content active" id="qtab-daily">
+    <div class="flex-col">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="card-title" style="margin:0;">My Daily Quests</div>
+          <span id="daily-q-badge" class="badge" style="background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.3);">0/0</span>
+        </div>
+        <div class="progress-bar"><div id="daily-q-prog" class="progress-fill" style="width:0%"></div></div>
+        <div id="custom-daily-list" style="margin-top:10px;"></div>
+        <div class="add-quest-row">
+          <span class="emoji-pick" id="daily-emoji-pick" onclick="openEmojiModal('daily')">⚔️</span>
+          <input class="form-input" id="daily-q-input" placeholder="Add a daily quest..." style="flex:1;" onkeydown="if(event.key==='Enter')addCustomQuest('daily')"/>
+          <button class="btn btn-accent btn-sm" onclick="addCustomQuest('daily')">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY TAB -->
+  <div class="tab-content" id="qtab-monthly">
+    <div class="flex-col">
+      <div class="card">
+        <div class="month-header">
+          <div>
+            <div class="month-label" id="month-label">June 2025</div>
+            <div class="month-prog" id="month-prog">0 of 0 completed</div>
+          </div>
+          <div class="progress-bar" style="width:120px;margin:0;align-self:center;"><div id="month-prog-fill" class="progress-fill" style="width:0%;background:var(--purple);"></div></div>
+        </div>
+        <div id="monthly-list"></div>
+        <div class="add-quest-row" style="margin-top:10px;">
+          <span class="emoji-pick" id="monthly-emoji-pick" onclick="openEmojiModal('monthly')">🌙</span>
+          <input class="form-input" id="monthly-q-input" placeholder="Add a monthly goal..." style="flex:1;" onkeydown="if(event.key==='Enter')addCustomQuest('monthly')"/>
+          <button class="btn btn-purple btn-sm" onclick="addCustomQuest('monthly')">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STORY TAB -->
+  <div class="tab-content" id="qtab-story">
+    <div class="flex-col">
+      <div id="story-quest-list"></div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:8px;">📝 Notes</div>
+        <textarea class="notes-area" id="quest-notes" placeholder="Write your plans or reminders..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="page" id="page-stats">
+  <div class="page-header">
+    <div class="page-title">📊 Your Stats</div>
+    <span class="badge day-header-badge" id="stats-hbadge">🔥 Day 1</span>
+  </div>
+  <div class="flex-col">
+    <div class="card"><div class="card-title">Your Stats</div><div class="grid-2" id="stat-fields"></div></div>
+    <div class="card">
+      <div class="card-title">Performance</div>
+      <div class="grid-3">
+        <div class="perf-stat"><div class="perf-value" id="perf-wins" style="color:var(--success);">0</div><div class="perf-label">PvP Wins</div></div>
+        <div class="perf-stat"><div class="perf-value" id="perf-deaths" style="color:var(--danger);">0</div><div class="perf-label">Deaths</div></div>
+        <div class="perf-stat"><div class="perf-value" id="perf-kd" style="color:var(--gold);">∞</div><div class="perf-label">K/D Ratio</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header"><div class="page-title">⚙️ Settings</div></div>
+  <div id="settings-layout">
+    <div id="settings-nav">
+      <div class="settings-nav-item active" data-panel="account">👤 Account</div>
+      <div class="settings-nav-item" data-panel="tracker">📅 Tracker</div>
+      <div class="settings-nav-item" data-panel="display">🖥️ Display</div>
+      <div class="settings-nav-item" data-panel="data">💾 Data</div>
+    </div>
+    <div id="settings-content" style="flex:1;">
+      <div class="settings-panel active card" id="panel-account">
+        <div class="card-title">Account</div>
+        <div style="margin-bottom:12px;"><label class="form-label">Username</label><input class="form-input" id="username-input" placeholder="Your Roblox username" oninput="updateUsername(this.value)"/></div>
+      </div>
+      <div class="settings-panel card" id="panel-tracker">
+        <div class="card-title">Tracker Settings</div>
+        <div><label class="form-label">Start Date</label><input type="date" class="form-input" id="start-date-input" onchange="updateStartDate(this.value)"/></div>
+        <div id="tracker-info" style="font-size:13px;color:var(--muted);margin-top:10px;"></div>
+      </div>
+      <div class="settings-panel card" id="panel-display">
+        <div class="card-title">Display</div>
+        <button class="btn btn-ghost-accent" id="sidebar-toggle-btn" onclick="toggleSidebar()">Collapse Sidebar</button>
+      </div>
+      <div class="settings-panel card" id="panel-data">
+        <div class="card-title">Data Management</div>
+        <button class="btn btn-danger" onclick="resetAllData()">🗑️ Reset All Data</button>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);">All data saves to your browser automatically.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UI CHANGER -->
+<div class="page" id="page-ui">
+  <div class="page-header"><div class="page-title">🎨 UI Changer</div></div>
+  <div class="flex-col">
+    <div id="theme-grid"></div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Active Theme</div>
+      <div id="active-theme-display" style="font-size:22px;text-align:center;padding:12px;background:var(--surface);border-radius:8px;"></div>
+      <div id="active-theme-dots" style="display:flex;gap:9px;margin-top:12px;justify-content:center;"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- EMOJI MODAL -->
+<div id="emoji-modal">
+  <div id="emoji-picker">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-weight:700;">Pick an icon</span>
+      <button onclick="closeEmojiModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">×</button>
+    </div>
+    <div class="emoji-grid" id="emoji-grid"></div>
+  </div>
+</div>
+
+<script>
+// ── STATIC DATA ─────────────────────────────────────────────────────────────
+const THEMES = {
+  ocean:   {name:"🌊 Ocean",  bg:"#0A0E1A",surface:"#0F1629",card:"#141B35",border:"#1E2D50",accent:"#00D4FF",gold:"#FFD700",text:"#E8F4FF",muted:"#7B9EC0",danger:"#FF3B5C",success:"#00E5A0",purple:"#8B5CF6",glow:"0 0 20px rgba(0,212,255,0.35)",dots:["#0A0E1A","#00D4FF","#FFD700","#FF3B5C","#00E5A0"]},
+  inferno: {name:"🔥 Inferno",bg:"#0D0500",surface:"#1A0A00",card:"#251000",border:"#4A1A00",accent:"#FF6B00",gold:"#FFD700",text:"#FFE8D0",muted:"#9A6040",danger:"#FF1744",success:"#76FF03",purple:"#FF3D00",glow:"0 0 20px rgba(255,107,0,0.4)",dots:["#0D0500","#FF6B00","#FFD700","#FF1744","#76FF03"]},
+  void:    {name:"⚫ Void",   bg:"#050508",surface:"#0A0A12",card:"#10101E",border:"#1E1E35",accent:"#8B5CF6",gold:"#FFD700",text:"#E0D8FF",muted:"#5A5080",danger:"#FF3B5C",success:"#00E5A0",purple:"#A78BFA",glow:"0 0 20px rgba(139,92,246,0.4)",dots:["#050508","#8B5CF6","#FFD700","#FF3B5C","#00E5A0"]},
+  jade:    {name:"🌿 Jade",   bg:"#030D08",surface:"#061510",card:"#0A1E14",border:"#0F3020",accent:"#00E5A0",gold:"#FFD700",text:"#D0FFE8",muted:"#3D7A5A",danger:"#FF3B5C",success:"#00E5A0",purple:"#8B5CF6",glow:"0 0 20px rgba(0,229,160,0.4)",dots:["#030D08","#00E5A0","#FFD700","#FF3B5C","#8B5CF6"]},
+};
+
+const FRUITS = [
+  {id:"chop",   name:"Chop",    tier:"C", type:"Paramecia",color:"#8BC34A", value:1000,   demand:"low",  trend:"→"},
+  {id:"spike",  name:"Spike",   tier:"C", type:"Paramecia",color:"#8BC34A", value:1000,   demand:"low",  trend:"→"},
+  {id:"spin",   name:"Spin",    tier:"C", type:"Paramecia",color:"#8BC34A", value:1500,   demand:"low",  trend:"↓"},
+  {id:"paw",    name:"Paw",     tier:"B", type:"Paramecia",color:"#FF80AB", value:12000,  demand:"low",  trend:"→"},
+  {id:"spring", name:"Spring",  tier:"B", type:"Paramecia",color:"#2196F3", value:5000,   demand:"low",  trend:"→"},
+  {id:"bomb",   name:"Bomb",    tier:"B", type:"Paramecia",color:"#2196F3", value:3000,   demand:"low",  trend:"↓"},
+  {id:"rubber", name:"Rubber",  tier:"B", type:"Paramecia",color:"#FFEB3B", value:10000,  demand:"med",  trend:"→"},
+  {id:"smoke",  name:"Smoke",   tier:"B", type:"Logia",    color:"#9E9E9E", value:8000,   demand:"low",  trend:"↓"},
+  {id:"toad",   name:"Toad",    tier:"A", type:"Zoan",     color:"#8BC34A", value:35000,  demand:"low",  trend:"↓"},
+  {id:"love",   name:"Love",    tier:"A", type:"Paramecia",color:"#FF4081", value:40000,  demand:"low",  trend:"→"},
+  {id:"portal", name:"Portal",  tier:"A", type:"Paramecia",color:"#673AB7", value:60000,  demand:"med",  trend:"↑"},
+  {id:"door",   name:"Door",    tier:"A", type:"Paramecia",color:"#795548", value:55000,  demand:"med",  trend:"→"},
+  {id:"ice",    name:"Ice",     tier:"A", type:"Logia",    color:"#00BCD4", value:45000,  demand:"low",  trend:"↓"},
+  {id:"sand",   name:"Sand",    tier:"A", type:"Logia",    color:"#FF9800", value:30000,  demand:"low",  trend:"↓"},
+  {id:"dark",   name:"Dark",    tier:"A", type:"Logia",    color:"#616161", value:25000,  demand:"low",  trend:"↓"},
+  {id:"magma",  name:"Magma",   tier:"A", type:"Logia",    color:"#FF5722", value:50000,  demand:"med",  trend:"→"},
+  {id:"snow",   name:"Snow",    tier:"A", type:"Logia",    color:"#B3E5FC", value:20000,  demand:"low",  trend:"↓"},
+  {id:"barrier",name:"Barrier", tier:"A", type:"Paramecia",color:"#9C27B0", value:45000,  demand:"low",  trend:"↓"},
+  {id:"revive", name:"Revive",  tier:"A", type:"Paramecia",color:"#E91E63", value:50000,  demand:"med",  trend:"→"},
+  {id:"diamond",name:"Diamond", tier:"A", type:"Paramecia",color:"#00E5FF", value:75000,  demand:"med",  trend:"→"},
+  {id:"light",  name:"Light",   tier:"S", type:"Logia",    color:"#FFF176", value:220000, demand:"high", trend:"↑"},
+  {id:"flame",  name:"Flame",   tier:"S", type:"Logia",    color:"#FF6D00", value:180000, demand:"high", trend:"↑"},
+  {id:"quake",  name:"Quake",   tier:"S", type:"Paramecia",color:"#6D4C41", value:280000, demand:"high", trend:"↑"},
+  {id:"buddha", name:"Buddha",  tier:"S", type:"Zoan",     color:"#FFC107", value:650000, demand:"very high",trend:"↑"},
+  {id:"string", name:"String",  tier:"S", type:"Paramecia",color:"#F48FB1", value:380000, demand:"high", trend:"→"},
+  {id:"phoenix",name:"Phoenix", tier:"S", type:"Zoan",     color:"#FF9800", value:750000, demand:"very high",trend:"↑"},
+  {id:"shadow", name:"Shadow",  tier:"S", type:"Paramecia",color:"#5C35A0", value:420000, demand:"high", trend:"↑"},
+  {id:"venom",  name:"Venom",   tier:"S", type:"Paramecia",color:"#76FF03", value:820000, demand:"very high",trend:"↑"},
+  {id:"pain",   name:"Pain",    tier:"S", type:"Paramecia",color:"#F44336", value:500000, demand:"high", trend:"→"},
+  {id:"leopard",name:"Leopard", tier:"S+",type:"Zoan",     color:"#FFD54F", value:2800000,demand:"very high",trend:"↑"},
+  {id:"rumble", name:"Rumble",  tier:"S+",type:"Logia",    color:"#FFEE58", value:1100000,demand:"high", trend:"↑"},
+  {id:"gravity",name:"Gravity", tier:"S+",type:"Paramecia",color:"#7E57C2", value:950000, demand:"high", trend:"→"},
+  {id:"kitsune",name:"Kitsune", tier:"S+",type:"Mythical", color:"#FF4081", value:2300000,demand:"very high",trend:"↑"},
+  {id:"yama",   name:"Yama",    tier:"S+",type:"Zoan",     color:"#26C6DA", value:850000, demand:"high", trend:"↑"},
+  {id:"dough",  name:"Dough",   tier:"S+",type:"Paramecia",color:"#FFCC02", value:1950000,demand:"very high",trend:"↑"},
+  {id:"control",name:"Control", tier:"S+",type:"Paramecia",color:"#00E5FF", value:1700000,demand:"very high",trend:"↑"},
+  {id:"soul",   name:"Soul",    tier:"S+",type:"Paramecia",color:"#FF80AB", value:1600000,demand:"high", trend:"↑"},
+  {id:"mammoth",name:"Mammoth", tier:"S+",type:"Zoan",     color:"#90A4AE", value:1400000,demand:"high", trend:"→"},
+  {id:"dragon", name:"Dragon",  tier:"S+",type:"Zoan",     color:"#4CAF50", value:3200000,demand:"very high",trend:"↑"},
+  {id:"gas",    name:"Gas",     tier:"S+",type:"Logia",    color:"#B2EBF2", value:1350000,demand:"high", trend:"↑"},
+];
+
+const STORY_QUESTS = [
+  {name:"Race Quest",desc:"Complete your race quest to level your race.",reward:"Race XP",icon:"🏃",time:"Daily"},
+  {name:"Saber Expert",desc:"Defeat 1000 enemies with Saber.",reward:"True Triple Katana",icon:"⚔️",time:"One-time"},
+  {name:"Cursed Dual Katana",desc:"Collect all fragments.",reward:"Cursed Dual Katana",icon:"🗡️",time:"One-time"},
+  {name:"Leather Cape",desc:"Defeat 5 Forest Pirates.",reward:"Leather Cape",icon:"🧥",time:"One-time"},
+  {name:"Ghoul Race",desc:"Complete Ghoul race quest chain.",reward:"Ghoul Race",icon:"👻",time:"Grind"},
+  {name:"Dragon Talon",desc:"Learn Dragon Talon from rip_indra.",reward:"Dragon Talon",icon:"🐉",time:"Grind"},
+  {name:"Cyborg Race",desc:"Find 4 parts + defeat Rip_Indra.",reward:"Cyborg Race",icon:"🤖",time:"Grind"},
+  {name:"Dark Blade",desc:"Trade Yoru to Mihawk.",reward:"Dark Blade V2",icon:"🌑",time:"One-time"},
+];
+
+const STAT_FIELDS = [
+  {key:"level",label:"Level",icon:"⚡",color:"#FFD700",max:2500},
+  {key:"beli",label:"Beli",icon:"💰",color:"#FFD700"},
+  {key:"fruitFragments",label:"Fruit Fragments",icon:"✨",color:null},
+  {key:"kills",label:"Total Kills",icon:"⚔️",color:null},
+  {key:"bossKills",label:"Boss Kills",icon:"💀",color:null},
+  {key:"raids",label:"Raids Completed",icon:"🌀",color:null},
+  {key:"pvpWins",label:"PvP Wins",icon:"🏆",color:null},
+  {key:"deaths",label:"Deaths",icon:"☠️",color:null},
+];
+
+const EMOJIS = ["⚔️","🌍","📋","🏃","📦","🏴‍☠️","🍎","⛵","💀","🔥","🌀","🏆","👻","🐉","🤖","🌑","🗡️","🧥","💪","🎯","🧠","💰","✨","🌊","⚡","🛡️","🗺️","🎁","🔮","💎","🌙","⭐","🎮","🏅","🎯","🦅","🦁","🐺","🦊","🐲","🌋","🏔️","🗻","🌐","🧲","💣","🪄","🔑","🗝️","🏹","🪃","🥊","🛡️","🧨","🎲"];
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let S = {
+  theme:"ocean", username:"Pirate", startDate:null,
+  fruitStatus:{}, tasks:{},
+  stats:{level:2500,beli:0,fruitFragments:0,kills:0,bossKills:0,raids:0,pvpWins:0,deaths:0},
+  questNotes:"",
+  customDailyQuests:[], // [{id,icon,name}]
+  customMonthlyQuests:[], // [{id,icon,name}]
+  monthlyDone:{}, // {monthKey: {questId: bool}}
+  storyDone:{}, // {questIdx: bool}
+  fruitFilter:"all", selectedFruit:null, sidebarCollapsed:false,
+  tradeSort:"value", tradeDir:"desc",
+  dailyEmojiPick:"⚔️", monthlyEmojiPick:"🌙",
+  emojiTarget:null,
+};
+
+const todayKey  = ()  => new Date().toISOString().split("T")[0];
+const monthKey  = ()  => { const n=new Date(); return `${n.getFullYear()}-${n.getMonth()+1}`; };
+const monthName = ()  => new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"});
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+function save() {
+  try {
+    localStorage.setItem("bft2",JSON.stringify({
+      theme:S.theme, username:S.username, startDate:S.startDate,
+      fruitStatus:S.fruitStatus, tasks:S.tasks, stats:S.stats,
+      questNotes:S.questNotes, customDailyQuests:S.customDailyQuests,
+      customMonthlyQuests:S.customMonthlyQuests, monthlyDone:S.monthlyDone,
+      storyDone:S.storyDone,
+    }));
+  } catch(e){}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem("bft2");
+    if(raw) {
+      const d=JSON.parse(raw);
+      Object.assign(S,{
+        theme:d.theme||"ocean", username:d.username||"Pirate", startDate:d.startDate||null,
+        fruitStatus:d.fruitStatus||{}, tasks:d.tasks||{}, stats:{...S.stats,...(d.stats||{})},
+        questNotes:d.questNotes||"", customDailyQuests:d.customDailyQuests||[],
+        customMonthlyQuests:d.customMonthlyQuests||[], monthlyDone:d.monthlyDone||{},
+        storyDone:d.storyDone||{},
+      });
+    }
+  } catch(e){}
+}
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+function applyTheme(key) {
+  S.theme=key;
+  const t=THEMES[key], r=document.documentElement.style;
+  r.setProperty("--bg",t.bg); r.setProperty("--surface",t.surface);
+  r.setProperty("--card",t.card); r.setProperty("--border",t.border);
+  r.setProperty("--accent",t.accent); r.setProperty("--gold",t.gold);
+  r.setProperty("--text",t.text); r.setProperty("--muted",t.muted);
+  r.setProperty("--danger",t.danger); r.setProperty("--success",t.success);
+  r.setProperty("--purple",t.purple); r.setProperty("--glow",t.glow);
+  renderThemeGrid(); renderActiveTheme(); save();
+}
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll(".nav-item").forEach(el=>{
+  el.addEventListener("click",()=>{
+    document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    el.classList.add("active");
+    document.getElementById("page-"+el.dataset.page).classList.add("active");
+  });
+});
+document.querySelectorAll(".settings-nav-item").forEach(el=>{
+  el.addEventListener("click",()=>{
+    document.querySelectorAll(".settings-nav-item").forEach(n=>n.classList.remove("active"));
+    document.querySelectorAll(".settings-panel").forEach(p=>p.classList.remove("active"));
+    el.classList.add("active");
+    document.getElementById("panel-"+el.dataset.panel).classList.add("active");
+  });
+});
+
+// ── SIDEBAR ──────────────────────────────────────────────────────────────────
+function toggleSidebar(){
+  S.sidebarCollapsed=!S.sidebarCollapsed;
+  document.getElementById("sidebar").classList.toggle("collapsed",S.sidebarCollapsed);
+  document.querySelector(".collapse-label").textContent=S.sidebarCollapsed?"":"← Hide";
+  document.querySelector(".collapse-icon").textContent=S.sidebarCollapsed?"▶":"◀";
+  document.getElementById("sidebar-toggle-btn").textContent=S.sidebarCollapsed?"Expand Sidebar":"Collapse Sidebar";
+}
+document.getElementById("collapse-btn").addEventListener("click",toggleSidebar);
+
+// ── QUEST TABS ───────────────────────────────────────────────────────────────
+function switchQuestTab(tab,btn){
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("qtab-"+tab).classList.add("active");
+}
+
+// ── DAY COUNTER ──────────────────────────────────────────────────────────────
+function getDays(){
+  if(!S.startDate) return null;
+  const a=new Date(S.startDate); a.setHours(0,0,0,0);
+  const b=new Date(); b.setHours(0,0,0,0);
+  return Math.floor((b-a)/86400000)+1;
+}
+function renderDayCounter(){
+  const d=getDays();
+  const numEl=document.getElementById("day-number");
+  numEl.textContent=d??'?';
+  document.getElementById("sb-day").textContent=d??'?';
+  const badges=document.querySelectorAll(".day-header-badge");
+  if(d){
+    badges.forEach(b=>{b.textContent="🔥 Day "+d;b.style.display="";});
+    document.getElementById("day-no-date").style.display="none";
+    document.getElementById("day-has-date").style.display="block";
+    document.getElementById("day-tmrw").textContent="Day "+(d+1);
+    document.getElementById("day-since").textContent="Started: "+new Date(S.startDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+    document.getElementById("tracker-info").textContent=`You've been playing for ${d} day${d!==1?"s":""}.`;
+    const sc=document.getElementById("streak-card"); sc.style.display="flex";
+    const t=d>=100?"Legendary Pirate":d>=30?"Sea Veteran":d>=7?"Ocean Wanderer":"New Recruit";
+    const sub=d>=100?`${d} days — you're a legend, ${S.username}!`:d>=30?`${d} days in — keep grinding!`:d>=7?`${d} days — warming up!`:`${d} days — just starting!`;
+    document.getElementById("streak-title").textContent=t;
+    document.getElementById("streak-sub").textContent=sub;
+    document.getElementById("streak-mile").textContent="Day "+(d<7?7:d<30?30:d<100?100:d<365?365:"∞");
+  } else {
+    badges.forEach(b=>b.style.display="none");
+    document.getElementById("day-no-date").style.display="block";
+    document.getElementById("day-has-date").style.display="none";
+    document.getElementById("streak-card").style.display="none";
+    document.getElementById("tracker-info").textContent="No start date set.";
+  }
+}
+function setStartToday(){
+  S.startDate=todayKey();
+  document.getElementById("start-date-input").value=S.startDate;
+  renderDayCounter(); save();
+  const n=document.getElementById("day-number");
+  n.classList.add("pulse"); setTimeout(()=>n.classList.remove("pulse"),300);
+}
+function resetDays(){
+  if(!confirm("Reset day counter?")) return;
+  S.startDate=null;
+  document.getElementById("start-date-input").value="";
+  renderDayCounter(); save();
+}
+function updateStartDate(v){ S.startDate=v||null; renderDayCounter(); save(); }
+function updateUsername(v){ S.username=v||"Pirate"; document.getElementById("dash-title").textContent=`Welcome back, ${S.username} 🏴‍☠️`; save(); }
+
+// ── DAILY TASKS (dashboard) ───────────────────────────────────────────────────
+function renderDashTasks(){
+  const list=document.getElementById("task-list");
+  const tk=todayKey(), today=S.tasks[tk]||{};
+  const allQ=S.customDailyQuests;
+  list.innerHTML="";
+  let done=0;
+  allQ.forEach(q=>{
+    if(today["cq_"+q.id]) done++;
+    const d=document.createElement("div");
+    d.className="task-item"+(today["cq_"+q.id]?" done":"");
+    d.innerHTML=`<span class="task-label" style="font-size:16px;">${q.icon}</span><span class="task-label">${q.name}</span><span>${today["cq_"+q.id]?"✅":"⬜"}</span>`;
+    d.onclick=()=>{
+      if(!S.tasks[tk]) S.tasks[tk]={};
+      S.tasks[tk]["cq_"+q.id]=!S.tasks[tk]["cq_"+q.id];
+      renderDashTasks(); renderCustomDailyList(); save();
+    };
+    list.appendChild(d);
+  });
+  if(!allQ.length){ list.innerHTML=`<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px;">No daily quests yet — add some in the Quests tab!</div>`; }
+  const total=allQ.length||1;
+  document.getElementById("task-badge").textContent=`${done}/${allQ.length}`;
+  document.getElementById("task-prog").style.width=`${(done/total)*100}%`;
+}
+
+// ── CUSTOM DAILY QUESTS ───────────────────────────────────────────────────────
+function addCustomQuest(type){
+  const input=document.getElementById(type==="daily"?"daily-q-input":"monthly-q-input");
+  const name=input.value.trim();
+  if(!name) return;
+  const icon=type==="daily"?S.dailyEmojiPick:S.monthlyEmojiPick;
+  const quest={id:Date.now().toString(),icon,name};
+  if(type==="daily"){ S.customDailyQuests.push(quest); renderCustomDailyList(); renderDashTasks(); }
+  else { S.customMonthlyQuests.push(quest); renderMonthlyList(); }
+  input.value=""; save();
+}
+function deleteCustomQuest(type,id){
+  if(type==="daily"){ S.customDailyQuests=S.customDailyQuests.filter(q=>q.id!==id); renderCustomDailyList(); renderDashTasks(); }
+  else { S.customMonthlyQuests=S.customMonthlyQuests.filter(q=>q.id!==id); renderMonthlyList(); }
+  save();
+}
+function renderCustomDailyList(){
+  const list=document.getElementById("custom-daily-list");
+  const tk=todayKey(), today=S.tasks[tk]||{};
+  let done=0;
+  list.innerHTML="";
+  S.customDailyQuests.forEach(q=>{
+    const isDone=!!today["cq_"+q.id];
+    if(isDone) done++;
+    const d=document.createElement("div");
+    d.className="custom-quest-row"+(isDone?" done":"");
+    d.innerHTML=`
+      <span class="cq-icon" style="font-size:18px;">${q.icon}</span>
+      <span class="cq-name">${q.name}</span>
+      <button onclick="event.stopPropagation();deleteCustomQuest('daily','${q.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 5px;" title="Delete">🗑️</button>
+      <span class="cq-check" onclick="toggleDailyQuest('${q.id}')">${isDone?"✅":"⬜"}</span>
+    `;
+    list.appendChild(d);
+  });
+  if(!S.customDailyQuests.length){
+    list.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:12px 0;text-align:center;">No quests yet. Add one below!</div>`;
+  }
+  const total=S.customDailyQuests.length||1;
+  document.getElementById("daily-q-badge").textContent=`${done}/${S.customDailyQuests.length}`;
+  document.getElementById("daily-q-prog").style.width=`${(done/total)*100}%`;
+}
+function toggleDailyQuest(id){
+  const tk=todayKey();
+  if(!S.tasks[tk]) S.tasks[tk]={};
+  S.tasks[tk]["cq_"+id]=!S.tasks[tk]["cq_"+id];
+  renderCustomDailyList(); renderDashTasks(); save();
+}
+
+// ── MONTHLY QUESTS ────────────────────────────────────────────────────────────
+function renderMonthlyList(){
+  const mk=monthKey();
+  if(!S.monthlyDone[mk]) S.monthlyDone[mk]={};
+  const done_map=S.monthlyDone[mk];
+  const list=document.getElementById("monthly-list");
+  list.innerHTML="";
+  let done=0;
+  S.customMonthlyQuests.forEach(q=>{
+    const isDone=!!done_map[q.id];
+    if(isDone) done++;
+    const d=document.createElement("div");
+    d.className="mq-item"+(isDone?" done":"");
+    d.innerHTML=`
+      <span class="mq-icon">${q.icon}</span>
+      <div class="mq-body">
+        <div class="mq-name">${q.name}</div>
+      </div>
+      <button onclick="event.stopPropagation();deleteCustomQuest('monthly','${q.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 5px;">🗑️</button>
+      <span class="mq-check">${isDone?"✅":"⬜"}</span>
+    `;
+    d.onclick=()=>{ done_map[q.id]=!done_map[q.id]; renderMonthlyList(); save(); };
+    list.appendChild(d);
+  });
+  if(!S.customMonthlyQuests.length){
+    list.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:12px 0;text-align:center;">No monthly goals yet. Add one below!</div>`;
+  }
+  document.getElementById("month-label").textContent=monthName();
+  const total=S.customMonthlyQuests.length||1;
+  document.getElementById("month-prog").textContent=`${done} of ${S.customMonthlyQuests.length} completed`;
+  document.getElementById("month-prog-fill").style.width=`${(done/total)*100}%`;
+}
+
+// ── STORY QUESTS ──────────────────────────────────────────────────────────────
+function renderStoryQuests(){
+  const list=document.getElementById("story-quest-list");
+  list.innerHTML="";
+  STORY_QUESTS.forEach((q,i)=>{
+    const isDone=!!S.storyDone[i];
+    const d=document.createElement("div");
+    d.className="quest-item"+(isDone?" done":"");
+    d.innerHTML=`
+      <span style="font-size:22px;">${q.icon}</span>
+      <div style="flex:1;">
+        <div class="quest-name">${q.name}</div>
+        <div class="quest-desc">${q.desc}</div>
+        <div class="quest-badges">
+          <span class="badge" style="background:rgba(255,215,0,.12);color:var(--gold);border:1px solid rgba(255,215,0,.25);">🏆 ${q.reward}</span>
+          <span class="badge" style="background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2);">${q.time}</span>
+        </div>
+      </div>
+      <span style="font-size:19px;">${isDone?"✅":"⬜"}</span>
+    `;
+    d.onclick=()=>{ S.storyDone[i]=!S.storyDone[i]; renderStoryQuests(); save(); };
+    list.appendChild(d);
+  });
+  const notes=document.getElementById("quest-notes");
+  notes.value=S.questNotes;
+  notes.oninput=()=>{ S.questNotes=notes.value; save(); };
+}
+
+// ── FRUITS ────────────────────────────────────────────────────────────────────
+function renderFruitFilters(){
+  const el=document.getElementById("fruit-filters");
+  ["all","owned","used","missing","C","B","A","S","S+"].forEach(f=>{
+    const b=document.createElement("button");
+    b.className="filter-btn"+(S.fruitFilter===f?" active":"");
+    b.textContent=f==="all"?"All":f;
+    b.onclick=()=>{ S.fruitFilter=f; renderFruitFilters(); renderFruitGrid(); };
+    el.appendChild(b);
+  });
+}
+function renderFruitGrid(){
+  document.getElementById("fruit-filters").innerHTML="";
+  renderFruitFilters();
+  const grid=document.getElementById("fruit-grid");
+  let owned=0, used=0;
+  FRUITS.forEach(f=>{ if(S.fruitStatus[f.id]==="owned") owned++; if(S.fruitStatus[f.id]==="used") used++; });
+  document.getElementById("f-owned").textContent=owned;
+  document.getElementById("f-used").textContent=used;
+  document.getElementById("f-missing").textContent=FRUITS.length-owned-used;
+  document.getElementById("qs-fruits").textContent=owned;
+  const filtered=FRUITS.filter(f=>{
+    if(S.fruitFilter==="owned") return S.fruitStatus[f.id]==="owned";
+    if(S.fruitFilter==="used") return S.fruitStatus[f.id]==="used";
+    if(S.fruitFilter==="missing") return !S.fruitStatus[f.id];
+    if(["C","B","A","S","S+"].includes(S.fruitFilter)) return f.tier===S.fruitFilter;
+    return true;
+  });
+  grid.innerHTML="";
+  filtered.forEach(fruit=>{
+    const status=S.fruitStatus[fruit.id];
+    const tc="tier-"+fruit.tier.replace("+","p");
+    const sel=S.selectedFruit?.id===fruit.id;
+    const div=document.createElement("div");
+    div.className=`fruit-card${status?" "+status:""}${sel?" selected":""}`;
+    div.innerHTML=`<div style="font-size:20px;margin-bottom:3px;">${status==="owned"?"🍇":status==="used"?"💫":"⚫"}</div><div class="fruit-name">${fruit.name}</div><span class="badge ${tc}">${fruit.tier}</span><div class="fruit-type">${fruit.type}</div>`;
+    div.onclick=()=>{ S.selectedFruit=S.selectedFruit?.id===fruit.id?null:fruit; renderFruitDetail(); renderFruitGrid(); };
+    grid.appendChild(div);
+  });
+}
+function renderFruitDetail(){
+  const panel=document.getElementById("fruit-detail");
+  const f=S.selectedFruit;
+  if(!f){ panel.classList.remove("visible"); return; }
+  panel.classList.add("visible");
+  const status=S.fruitStatus[f.id];
+  const tc="tier-"+f.tier.replace("+","p");
+  document.getElementById("fd-ball").style.cssText=`width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:${f.color}33;border:2px solid ${f.color};`;
+  document.getElementById("fd-name").textContent=f.name;
+  document.getElementById("fd-badges").innerHTML=`<span class="badge ${tc}">Tier ${f.tier}</span><span class="badge" style="background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2);">${f.type}</span>`;
+  document.getElementById("fd-value-block").innerHTML=`<div style="font-size:11px;color:var(--muted);">Est. Value</div><div style="font-weight:900;color:var(--gold);font-size:15px;">${fmtVal(f.value)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Demand: ${f.demand}</div>`;
+  const ob=document.getElementById("fd-own-btn");
+  const ub=document.getElementById("fd-use-btn");
+  ob.className=status==="owned"?"btn btn-success":"btn btn-ghost-success"; ob.textContent=status==="owned"?"✅ Owned":"Mark Owned";
+  ub.className=status==="used"?"btn btn-purple":"btn btn-ghost-purple"; ub.textContent=status==="used"?"💫 Used":"Mark Used";
+}
+function fdToggle(s){ if(!S.selectedFruit) return; S.fruitStatus[S.selectedFruit.id]=S.fruitStatus[S.selectedFruit.id]===s?null:s; renderFruitDetail(); renderFruitGrid(); save(); }
+function closeFruitDetail(){ S.selectedFruit=null; renderFruitDetail(); renderFruitGrid(); }
+
+// ── TRADING ───────────────────────────────────────────────────────────────────
+const SORT_OPTS=[{key:"value",label:"💰 Value"},{key:"name",label:"🔤 Name"},{key:"tier",label:"⭐ Tier"},{key:"demand",label:"📈 Demand"}];
+const DEMAND_ORDER={low:0,med:1,high:2,"very high":3};
+const TIER_ORDER={"C":0,"B":1,"A":2,"S":3,"S+":4};
+
+function fmtVal(v){
+  if(v>=1000000) return (v/1000000).toFixed(1)+"M";
+  if(v>=1000) return (v/1000).toFixed(0)+"K";
+  return v;
+}
+function demandColor(d){
+  return d==="very high"?"var(--gold)":d==="high"?"var(--success)":d==="med"?"var(--accent)":"var(--muted)";
+}
+
+function renderTradeSortBar(){
+  const bar=document.getElementById("trade-sort-bar");
+  bar.innerHTML="";
+  SORT_OPTS.forEach(o=>{
+    const b=document.createElement("button");
+    b.className="sort-btn"+(S.tradeSort===o.key?" active":"");
+    b.textContent=o.label+(S.tradeSort===o.key?(S.tradeDir==="desc"?" ↓":" ↑"):"");
+    b.onclick=()=>{
+      if(S.tradeSort===o.key) S.tradeDir=S.tradeDir==="desc"?"asc":"desc";
+      else { S.tradeSort=o.key; S.tradeDir="desc"; }
+      renderTradeSortBar(); renderTradeTable();
+    };
+    bar.appendChild(b);
+  });
+}
+
+function renderTradeTable(){
+  const q=(document.getElementById("trade-search").value||"").toLowerCase();
+  let data=[...FRUITS].filter(f=>f.name.toLowerCase().includes(q)||f.type.toLowerCase().includes(q)||f.tier.toLowerCase().includes(q));
+  data.sort((a,b)=>{
+    let av,bv;
+    if(S.tradeSort==="value"){av=a.value;bv=b.value;}
+    else if(S.tradeSort==="name"){av=a.name;bv=b.name;}
+    else if(S.tradeSort==="tier"){av=TIER_ORDER[a.tier];bv=TIER_ORDER[b.tier];}
+    else if(S.tradeSort==="demand"){av=DEMAND_ORDER[a.demand];bv=DEMAND_ORDER[b.demand];}
+    if(av<bv) return S.tradeDir==="asc"?-1:1;
+    if(av>bv) return S.tradeDir==="asc"?1:-1;
+    return 0;
+  });
+  const tbody=document.getElementById("trade-tbody");
+  tbody.innerHTML="";
+  data.forEach(f=>{
+    const tc="tier-"+f.tier.replace("+","p");
+    const valClass=f.value>=1000000?"val-high":f.value>=200000?"val-mid":"val-low";
+    const trendColor=f.trend==="↑"?"var(--success)":f.trend==="↓"?"var(--danger)":"var(--muted)";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td style="display:flex;align-items:center;gap:9px;font-weight:700;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${f.color};display:inline-block;flex-shrink:0;box-shadow:0 0 6px ${f.color}88;"></span>
+        ${f.name}
+        ${S.fruitStatus[f.id]==="owned"?'<span style="font-size:11px;color:var(--success);">✅</span>':''}
+      </td>
+      <td><span class="badge ${tc}">${f.tier}</span></td>
+      <td style="color:var(--muted);font-size:12px;">${f.type}</td>
+      <td class="${valClass}">${fmtVal(f.value)} R$</td>
+      <td><span style="display:flex;align-items:center;"><span class="demand-dot" style="background:${demandColor(f.demand)};"></span><span style="font-size:12px;color:${demandColor(f.demand)};font-weight:700;text-transform:capitalize;">${f.demand}</span></span></td>
+      <td style="color:${trendColor};font-weight:900;font-size:16px;">${f.trend}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+function renderStatFields(){
+  const grid=document.getElementById("stat-fields");
+  grid.innerHTML="";
+  STAT_FIELDS.forEach(sf=>{
+    const color=sf.color||"var(--accent)";
+    const div=document.createElement("div");
+    div.className="stat-field";
+    div.innerHTML=`
+      <label><span>${sf.icon}</span>${sf.label}</label>
+      <input class="stat-input" type="number" min="0" value="${S.stats[sf.key]}" style="color:${color};" data-key="${sf.key}"/>
+      ${sf.max?`<div class="progress-bar"><div class="progress-fill" style="width:${Math.min((S.stats[sf.key]/sf.max)*100,100)}%;background:${color};"></div></div>`:""}
+    `;
+    div.querySelector("input").addEventListener("input",function(){
+      const v=Math.max(0,parseInt(this.value)||0);
+      S.stats[sf.key]=v;
+      const bar=div.querySelector(".progress-fill");
+      if(bar&&sf.max) bar.style.width=Math.min((v/sf.max)*100,100)+"%";
+      updateQuickStats(); updatePerf(); save();
+    });
+    grid.appendChild(div);
+  });
+}
+function updateQuickStats(){
+  document.getElementById("qs-level").textContent=S.stats.level.toLocaleString();
+  document.getElementById("qs-boss").textContent=S.stats.bossKills.toLocaleString();
+  document.getElementById("qs-raids").textContent=S.stats.raids.toLocaleString();
+}
+function updatePerf(){
+  document.getElementById("perf-wins").textContent=S.stats.pvpWins.toLocaleString();
+  document.getElementById("perf-deaths").textContent=S.stats.deaths.toLocaleString();
+  document.getElementById("perf-kd").textContent=S.stats.deaths>0?(S.stats.pvpWins/S.stats.deaths).toFixed(2):"∞";
+}
+
+// ── THEME UI ─────────────────────────────────────────────────────────────────
+function renderThemeGrid(){
+  const grid=document.getElementById("theme-grid");
+  grid.innerHTML="";
+  Object.entries(THEMES).forEach(([key,th])=>{
+    const div=document.createElement("div");
+    div.className="theme-card"+(S.theme===key?" active":"");
+    div.innerHTML=`<div class="theme-dots">${th.dots.map(c=>`<div class="theme-dot" style="background:${c};border:1px solid rgba(255,255,255,.1);"></div>`).join("")}</div><div class="theme-name" style="color:${S.theme===key?"var(--accent)":"var(--text)"};">${th.name}</div>${S.theme===key?`<div style="font-size:11px;color:var(--accent);margin-top:3px;">✓ Active</div>`:""}`;
+    div.onclick=()=>applyTheme(key);
+    grid.appendChild(div);
+  });
+}
+function renderActiveTheme(){
+  document.getElementById("active-theme-display").textContent=THEMES[S.theme].name;
+  document.getElementById("active-theme-dots").innerHTML=THEMES[S.theme].dots.map(c=>`<div style="width:30px;height:30px;border-radius:8px;background:${c};box-shadow:0 0 10px ${c}77;"></div>`).join("");
+}
+
+// ── EMOJI PICKER ─────────────────────────────────────────────────────────────
+function openEmojiModal(target){
+  S.emojiTarget=target;
+  const grid=document.getElementById("emoji-grid");
+  grid.innerHTML="";
+  EMOJIS.forEach(e=>{
+    const b=document.createElement("button");
+    b.className="emoji-btn"; b.textContent=e;
+    b.onclick=()=>{
+      if(S.emojiTarget==="daily"){ S.dailyEmojiPick=e; document.getElementById("daily-emoji-pick").textContent=e; }
+      else { S.monthlyEmojiPick=e; document.getElementById("monthly-emoji-pick").textContent=e; }
+      closeEmojiModal();
+    };
+    grid.appendChild(b);
+  });
+  document.getElementById("emoji-modal").classList.add("open");
+}
+function closeEmojiModal(){ document.getElementById("emoji-modal").classList.remove("open"); }
+document.getElementById("emoji-modal").addEventListener("click",function(e){ if(e.target===this) closeEmojiModal(); });
+
+// ── RESET ────────────────────────────────────────────────────────────────────
+function resetAllData(){
+  if(!confirm("Reset ALL data? This cannot be undone.")) return;
+  S.startDate=null; S.fruitStatus={}; S.tasks={};
+  S.stats={level:2500,beli:0,fruitFragments:0,kills:0,bossKills:0,raids:0,pvpWins:0,deaths:0};
+  S.questNotes=""; S.customDailyQuests=[]; S.customMonthlyQuests=[];
+  S.monthlyDone={}; S.storyDone={};
+  init(); save();
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+function init(){
+  applyTheme(S.theme);
+  document.getElementById("username-input").value=S.username;
+  document.getElementById("dash-title").textContent=`Welcome back, ${S.username} 🏴‍☠️`;
+  document.getElementById("daily-emoji-pick").textContent=S.dailyEmojiPick||"⚔️";
+  document.getElementById("monthly-emoji-pick").textContent=S.monthlyEmojiPick||"🌙";
+  if(S.startDate) document.getElementById("start-date-input").value=S.startDate;
+  renderDayCounter();
+  renderDashTasks();
+  renderFruitGrid();
+  renderTradeSortBar();
+  renderTradeTable();
+  renderCustomDailyList();
+  renderMonthlyList();
+  renderStoryQuests();
+  renderStatFields();
+  updateQuickStats();
+  updatePerf();
+  renderThemeGrid();
+  renderActiveTheme();
+}
+
+load();
+init();
+</script>
+</body>
+</html>
